@@ -42,10 +42,7 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Public
@@ -137,10 +134,25 @@ public class AmIpFilter implements Filter {
 
     HttpServletRequest httpReq = (HttpServletRequest)req;
     HttpServletResponse httpResp = (HttpServletResponse)resp;
-
+    LOG.debug("HttpServletRequest: {}", httpReq);
     LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
-
-    if (!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
+    Set<String> proxies = getProxyAddresses();
+    LOG.debug("ProxyAddresses: {}", proxies);
+    Enumeration<String> names = ((HttpServletRequest) req).getHeaderNames();
+    while(names.hasMoreElements()) {
+      String name = names.nextElement();
+      LOG.debug("Req header: {} = {}", name, ((HttpServletRequest) req).getHeader(name));
+    }
+    boolean isProxy = false;
+    if (httpReq.getCookies() != null) {
+      for (Cookie c : httpReq.getCookies()) {
+        if(WebAppProxyServlet.PROXY_USER_COOKIE_NAME.equals(c.getName())){
+          isProxy = true;
+          LOG.info("Proxy user is {}", c.getValue());
+        }
+      }
+    }
+    if (!proxies.contains(httpReq.getRemoteAddr()) && !isProxy) {
       StringBuilder redirect = new StringBuilder(findRedirectUrl());
 
       redirect.append(httpReq.getRequestURI());
@@ -216,6 +228,8 @@ public class AmIpFilter implements Filter {
     try {
       HttpURLConnection conn = (HttpURLConnection) new URL(url)
           .openConnection();
+      conn.setConnectTimeout(5000);
+      conn.setReadTimeout(5000);
       conn.connect();
       isValid = conn.getResponseCode() == HttpURLConnection.HTTP_OK;
       // If security is enabled, any valid RM which can give 401 Unauthorized is
