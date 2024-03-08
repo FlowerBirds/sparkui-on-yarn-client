@@ -228,8 +228,8 @@ public class AmIpFilter implements Filter {
     try {
       HttpURLConnection conn = (HttpURLConnection) new URL(url)
           .openConnection();
-      conn.setConnectTimeout(5000);
-      conn.setReadTimeout(5000);
+      // conn.setConnectTimeout(5000);
+      // conn.setReadTimeout(5000);
       conn.connect();
       isValid = conn.getResponseCode() == HttpURLConnection.HTTP_OK;
       // If security is enabled, any valid RM which can give 401 Unauthorized is
